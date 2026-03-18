@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================
 # utils.sh - Shared utility functions for the audit system
-# Author: Person A
+# Author: Karim
 # Date: $(date)
 # =============================================================
 
