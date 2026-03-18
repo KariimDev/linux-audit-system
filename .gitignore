@@ -1,0 +1,22 @@
+# Runtime logs
+logs/*.log
+logs/*.txt
+
+# Generated reports
+reports/*.txt
+reports/*.html
+reports/*.json
+reports/*.pdf
+
+# System audit directory
+/var/log/sys_audit/
+
+# Sensitive config
+config/email.conf
+
+# Keep placeholder files
+!**/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
