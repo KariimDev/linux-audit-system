@@ -1,5 +1,5 @@
 # Linux Audit System — Design Architecture
-**Author:** Person A  
+**Author:** Karim 
 **Date:** 2026-03-19  
 **Course:** Operating Systems — NSCS 2025/2026
 

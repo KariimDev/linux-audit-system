@@ -2,7 +2,6 @@
 # =============================================================
 # utils.sh - Shared utility functions for the audit system
 # Author: Karim
-# Date: $(date)
 # =============================================================
 
 # -------------------------------------------------------------
@@ -23,6 +22,7 @@ LOG_DIR="logs"
 LOG_FILE="$LOG_DIR/audit.log"
 
 log_info() {
+    #-e means interpret escape sequences (for colors) and -a means append to the log file
     echo -e "${GREEN}[INFO]${RESET} $(timestamp) - $1" | tee -a "$LOG_FILE"
 }
 
@@ -38,14 +38,21 @@ log_error() {
 # TIMESTAMP
 # -------------------------------------------------------------
 timestamp() {
+    # Return the current date and time in a standard format (YYYY-MM-DD HH:MM:SS)
+    timestamp() {
+    if ! check_command date; then
+        echo "N/A"
+        return 1
+    fi
     date +"%Y-%m-%d %H:%M:%S"
+}
 }
 
 # -------------------------------------------------------------
 # ERROR HANDLING
 # -------------------------------------------------------------
 check_command() {
-    # Check if a command exists on the system
+    #command is a built-in function that checks if a command exists in the system. If the command is not found, it logs a warning and returns 1 (indicating failure). If the command exists, it returns 0 (indicating success).
     if ! command -v "$1" &>/dev/null; then
         log_warn "Command '$1' not found — skipping."
         return 1
