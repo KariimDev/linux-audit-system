@@ -107,7 +107,7 @@ sudo apt install usbutils           # USB info (lsusb)
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/linux-audit-system.git
+git clone https://github.com/karrimdev/linux-audit-system.git
 cd linux-audit-system
 ```
 
