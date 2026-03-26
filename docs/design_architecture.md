@@ -1,5 +1,5 @@
 # Linux Audit System — Design Architecture
-**Author:** Karim 
+**Author:** Abderrahim
 **Date:** 2026-03-19  
 **Course:** Operating Systems — NSCS 2025/2026
 
@@ -42,7 +42,7 @@ linux-audit-system/
 
 ## 3. Data Flow
 ```
-┌─────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────┐
 │                    main.sh                       │
 │              (Entry Point / Menu)                │
 └──────┬──────────────────────────────────┬────────┘
