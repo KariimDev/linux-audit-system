@@ -20,9 +20,8 @@ fi
 if [[ -f "$PROJECT_ROOT/config/email.conf" ]]; then
     source "$PROJECT_ROOT/config/email.conf"
 else
-    # Provide safe defaults so the script doesn't crash with set -u
-    RECIPIENT_EMAIL="admin@example.com"
-    SENDER_EMAIL="audit@example.com"
+    EMAIL_RECIPIENT="admin@example.com"
+    EMAIL_SENDER="audit@example.com"
 fi
 
 if [[ -f "$PROJECT_ROOT/config/audit.conf" ]]; then
@@ -103,7 +102,7 @@ send_report() {
     echo -e "  ${GREEN}Report file found:${RESET} $report_file"
     echo ""
 
-    echo -e "  ${YELLOW}Sending to:${RESET} $RECIPIENT_EMAIL"
+    echo -e "  ${YELLOW}Sending to:${RESET} $EMAIL_RECIPIENT"
     echo -ne "  ${CYAN}Confirm? [y/n]: ${RESET}"
     read -r confirm
 
@@ -121,25 +120,23 @@ send_report() {
 
     if [[ "$mail_tool" == "msmtp" ]]; then
         {
-            echo "To: $RECIPIENT_EMAIL"
-            echo "From: $SENDER_EMAIL"
+            echo "To: $EMAIL_RECIPIENT"
+            echo "From: $EMAIL_SENDER"
             echo "Subject: $subject"
             echo ""
             cat "$report_file"
-        } | msmtp "$RECIPIENT_EMAIL" && send_ok=1 || send_ok=0
+        } | msmtp "$EMAIL_RECIPIENT" && send_ok=1 || send_ok=0
 
     elif [[ "$mail_tool" == "sendmail" ]]; then
         {
-            echo "To: $RECIPIENT_EMAIL"
+            echo "To: $EMAIL_RECIPIENT"
             echo "Subject: $subject"
             echo ""
             cat "$report_file"
-        } | sendmail -v "$RECIPIENT_EMAIL" && send_ok=1 || send_ok=0
+        } | sendmail -v "$EMAIL_RECIPIENT" && send_ok=1 || send_ok=0
 
     elif [[ "$mail_tool" == "mail" ]]; then
-        # -a is the portable attachment flag for most mail implementations
-        # If you're on mailutils use -A, on bsd-mailx use -a
-        mail -s "$subject" -a "$report_file" "$RECIPIENT_EMAIL" < /dev/null && send_ok=1 || send_ok=0
+        mail -s "$subject" -a "$report_file" "$EMAIL_RECIPIENT" < /dev/null && send_ok=1 || send_ok=0
     fi
 
     if [[ "$send_ok" -eq 1 ]]; then
@@ -165,7 +162,7 @@ send_report_auto() {
     fi
 
     local report_file
-    report_file=$(ls -t "$REPORT_DIR"/full_report_*.txt 2>/dev/null | head -1)
+    report_file=$(ls -t "$REPORT_DIR"/full_report_*.txt 2>/dev/null | head -1 || true)
 
     if [[ -z "$report_file" || ! -f "$report_file" ]]; then
         log_error "No report found to send."
@@ -173,27 +170,30 @@ send_report_auto() {
     fi
 
     local subject="Linux Audit Report — $(hostname) — $(date '+%Y-%m-%d %H:%M')"
+    local send_ok=0
 
     if [[ "$mail_tool" == "msmtp" ]]; then
         {
             echo "To: $EMAIL_RECIPIENT"
-            echo "From: $SENDER_EMAIL"
+            echo "From: $EMAIL_SENDER"
             echo "Subject: $subject"
             echo ""
             cat "$report_file"
-        } | msmtp "$EMAIL_RECIPIENT"
+        } | msmtp "$EMAIL_RECIPIENT" && send_ok=1 || send_ok=0
+
     elif [[ "$mail_tool" == "sendmail" ]]; then
         {
             echo "To: $EMAIL_RECIPIENT"
             echo "Subject: $subject"
             echo ""
             cat "$report_file"
-        } | sendmail -v "$EMAIL_RECIPIENT"
+        } | sendmail -v "$EMAIL_RECIPIENT" && send_ok=1 || send_ok=0
+
     elif [[ "$mail_tool" == "mail" ]]; then
-        mail -s "$subject" -A "$report_file" "$EMAIL_RECIPIENT" < /dev/null
+        mail -s "$subject" -a "$report_file" "$EMAIL_RECIPIENT" < /dev/null && send_ok=1 || send_ok=0
     fi
 
-    if [[ $? -eq 0 ]]; then
+    if [[ "$send_ok" -eq 1 ]]; then
         log_info "Automated report sent to $EMAIL_RECIPIENT"
     else
         log_error "Failed to send automated report."

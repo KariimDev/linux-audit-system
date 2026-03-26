@@ -3,6 +3,8 @@
 # Collects hardware and software info, generates a full report, and sends it by email
 # No interaction needed — fully silent and automated
 
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 

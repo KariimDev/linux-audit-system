@@ -32,15 +32,9 @@ setup_cron() {
         return 1
     fi
 
-    # || true is important here so the check failure doesn't kill the set -e pipeline
-    if crontab -l 2>/dev/null | grep -Fq "$SCRIPT_PATH" || true; then
-        # Actually it's an if condition, so bash doesn't abort on grep failing.
-        # But wait, grep -q returns 0 if found.
-        # If crontab -l | grep returns 0, it means the job exists.
-        if crontab -l 2>/dev/null | grep -Fq "$SCRIPT_PATH"; then
-            log_warn "Cron job already exists. Skipping."
-            return 0
-        fi
+    if crontab -l 2>/dev/null | grep -Fq "$SCRIPT_PATH"; then
+        log_warn "Cron job already exists. Skipping."
+        return 0
     fi
 
     # crontab -l might fail completely if no crontab exists (returns 1 on many systems)

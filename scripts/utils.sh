@@ -2,6 +2,10 @@
 # utils.sh - Shared utility functions for the audit system
 # Author: Karim
 
+# Guard against being sourced multiple times
+[[ -n "${_UTILS_LOADED:-}" ]] && return 0
+_UTILS_LOADED=1
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
