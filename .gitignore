@@ -20,3 +20,6 @@ config/email.conf
 # OS files
 .DS_Store
 Thumbs.db
+
+# AI context file
+forai.md

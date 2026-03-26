@@ -13,10 +13,11 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # VARIABLES
 # -------------------------------------------------------------
 # absolute path to main.sh — cron needs full paths, not relative
-SCRIPT_PATH="$SCRIPT_DIR/main.sh"
+SCRIPT_PATH="$SCRIPT_DIR/auto_audit.sh"
 CRON_LOG="$PROJECT_ROOT/logs/cron.log"
 
-# run main.sh every day at 4:00 AM
+# run auto_audit.sh every day at 4:00 AM
+# auto_audit.sh collects info, generates report, and sends it by email silently
 CRON_JOB="0 4 * * * bash $SCRIPT_PATH >> $CRON_LOG 2>&1"
 
 # -------------------------------------------------------------

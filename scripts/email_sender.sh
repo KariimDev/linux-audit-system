@@ -154,3 +154,49 @@ send_report() {
 
     echo ""
 }
+
+send_report_auto() {
+    local mail_tool
+    mail_tool=$(detect_mail_tool)
+
+    if [[ "$mail_tool" == "none" ]]; then
+        log_error "No email tool found. Cannot send automated report."
+        return 1
+    fi
+
+    local report_file
+    report_file=$(ls -t "$REPORT_DIR"/full_report_*.txt 2>/dev/null | head -1)
+
+    if [[ -z "$report_file" || ! -f "$report_file" ]]; then
+        log_error "No report found to send."
+        return 1
+    fi
+
+    local subject="Linux Audit Report — $(hostname) — $(date '+%Y-%m-%d %H:%M')"
+
+    if [[ "$mail_tool" == "msmtp" ]]; then
+        {
+            echo "To: $EMAIL_RECIPIENT"
+            echo "From: $SENDER_EMAIL"
+            echo "Subject: $subject"
+            echo ""
+            cat "$report_file"
+        } | msmtp "$EMAIL_RECIPIENT"
+    elif [[ "$mail_tool" == "sendmail" ]]; then
+        {
+            echo "To: $EMAIL_RECIPIENT"
+            echo "Subject: $subject"
+            echo ""
+            cat "$report_file"
+        } | sendmail -v "$EMAIL_RECIPIENT"
+    elif [[ "$mail_tool" == "mail" ]]; then
+        mail -s "$subject" -A "$report_file" "$EMAIL_RECIPIENT" < /dev/null
+    fi
+
+    if [[ $? -eq 0 ]]; then
+        log_info "Automated report sent to $EMAIL_RECIPIENT"
+    else
+        log_error "Failed to send automated report."
+        return 1
+    fi
+}
