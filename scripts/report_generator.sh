@@ -1,22 +1,14 @@
 #!/usr/bin/env bash
- 
-# -e Stop the script if any command fails
-# -u Stop if you use a variable you forgot to define
-# -o pipefail Stop if a command inside a pipe | fails
-set -euo pipefail
- 
-# Find where THIS script is, works on all machines
-#dirname: This command takes a full path and removes the filename, leaving only the directory part.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
- 
-# Go one folder up = the project root
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
- 
-# If utils.sh exists load it, if not define colors manually
-if [[ -f "$SCRIPT_DIR/utils.sh" ]]; then
 
-#When a script runs this line, it doesn't just "run" utils.sh as a separate program. Instead, 
-#it pulls everything inside utils.sh—such as variables, aliases, and functions—directly into the main script.
+# -e  stop if a command fails
+# -u  stop if you reference an undefined variable
+# -o pipefail  stop if any command inside a pipe fails
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+if [[ -f "$SCRIPT_DIR/utils.sh" ]]; then
     source "$SCRIPT_DIR/utils.sh"
 else
     RED='\033[0;31m'
@@ -26,35 +18,27 @@ else
     BOLD='\033[1m'
     RESET='\033[0m'
 fi
- 
-# Load the config file if it exists
+
+# Pull in the config — use defaults if the file is missing
 if [[ -f "$PROJECT_ROOT/config/audit.conf" ]]; then
     source "$PROJECT_ROOT/config/audit.conf"
 else
-    # If config is missing, use default values
-    REPORT_DIR="/var/log/sys_audit"
+    REPORT_DIR="$PROJECT_ROOT/reports"
     CPU_THRESHOLD=80
 fi
- 
-# Create the report directory if it does not exist yet
-# -p mean dont show error if it already exists
+
+# Create the report directory — uses project-local path to avoid needing sudo
 mkdir -p "$REPORT_DIR"
- 
-# FUNCTION: Generate a short summary report
-# Saves as .txt file
+
+
+# ── SHORT REPORT ──────────────────────────────────────────────
 generate_short_report() {
- 
-    # Build the filename with current date and time
-    # ex short_report_2026-03-23_14-35-02.txt
     local filename="short_report_$(date '+%Y-%m-%d_%H-%M-%S').txt"
- 
-    # Full path where the file will be saved
     local filepath="$REPORT_DIR/$filename"
-    #The echo -e command is a specific flag used in Bash and other shells that tells the system to enable the interpretation of backslash escapes.
+
     echo -e "${CYAN}${BOLD}  [ Generating Short Report... ]${RESET}"
     echo ""
- 
-    # Everything inside { } will be written into the file
+
     {
         echo "======================================"
         echo "   LINUX SYSTEM AUDIT — SHORT REPORT"
@@ -64,68 +48,54 @@ generate_short_report() {
         echo "  User     : $(whoami)"
         echo "======================================"
         echo ""
- 
+
         echo "--- OS INFO ---"
-        #Searches the system info file for the line containing the OS name 
-        # Splits the line at the = sign and keeps the second part (the name).
-        # Deletes the quotation marks for a cleaner look.
         echo "  OS       : $(grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"')"
         echo "  Kernel   : $(uname -r)"
         echo "  Arch     : $(uname -m)"
         echo ""
- 
+
         echo "--- CPU ---"
-        # grep finds the model name line, head takes first one, cut removes the labeland xargs remove spaces and something to be more orgenized
         echo "  Model    : $(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)"
-        # Count how many CPU cores the machine has
         echo "  Cores    : $(nproc)"
         echo ""
- 
+
         echo "--- MEMORY ---"
-        # free -h shows memory in human readable format (GB/MB)
-        # awk picks the second line (Mem:) and prints used/total
-        # The $2, $3, $4 refer to the columns in the output of free -h (total, used, free)
+        # awk prints total, used, free from the Mem: line
         free -h | awk '/^Mem:/ {print "  Total: " $2 "  |  Used: " $3 "  |  Free: " $4}'
         echo ""
- 
+
         echo "--- DISK ---"
-        # df -h shows disk space in human readable format
-        # awk skips the header line and prints each partition
         df -h | awk 'NR>1 {print "  " $1 " → Size: " $2 " | Used: " $3 " | Free: " $4}'
         echo ""
- 
+
         echo "--- NETWORK ---"
-        # ip a shows all network interfaces
-        # grep finds lines with IP addresses (inet)
-        # awk prints just the IP address
-        ip a | grep "inet " | awk '{print "  " $2}'
+        # || true so the script doesn't die if there are no inet addresses
+        ip a | grep "inet " | awk '{print "  " $2}' || true
         echo ""
- 
+
         echo "======================================"
         echo "  END OF SHORT REPORT"
         echo "======================================"
- 
-    # The > saves everything above into the file
+
     } > "$filepath"
- 
-    # Tell the user where the file was saved
+
     echo -e "  ${GREEN}Short report saved to:${RESET} $filepath"
     echo ""
 }
- 
- 
-# FUNCTION: Generate a full detailed report
-# Saves as .txt AND .html AND .json
+
+
+# ── FULL REPORT ───────────────────────────────────────────────
 generate_full_report() {
- 
     local base="full_report_$(date '+%Y-%m-%d_%H-%M-%S')"
-     local txt_file="$REPORT_DIR/$base.txt"
+    local txt_file="$REPORT_DIR/$base.txt"
     local html_file="$REPORT_DIR/$base.html"
     local json_file="$REPORT_DIR/$base.json"
- 
+
     echo -e "${CYAN}${BOLD}  [ Generating Full Report... ]${RESET}"
     echo ""
- 
+
+    # ── TXT ──────────────────────────────────────────────
     {
         echo "=============================================="
         echo "   LINUX SYSTEM AUDIT — FULL REPORT"
@@ -135,111 +105,87 @@ generate_full_report() {
         echo "  User     : $(whoami)"
         echo "=============================================="
         echo ""
- 
+
         echo "━━━ HARDWARE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
- 
+
         echo "[ CPU ]"
-        # Print all CPU info lines from /proc/cpuinfo
         grep 'model name\|cpu MHz\|cache size' /proc/cpuinfo | sort -u | \
             awk -F: '{print "  " $1 ": " $2}'
         echo ""
- 
+
         echo "[ GPU ]"
-        # lspci lists hardware devices, grep finds the VGA/display card
-        # 2>/dev/null hides errors if lspci is not installed
+        # lspci might not be installed — silently skip if missing
         lspci 2>/dev/null | grep -i "vga\|3d\|display" | \
             awk '{print "  " $0}' || echo "  GPU info not available"
         echo ""
- 
+
         echo "[ RAM ]"
-        # free -h shows full memory table
         free -h | awk '{print "  " $0}'
         echo ""
- 
+
         echo "[ DISK ]"
-        # lsblk shows disk partitions in a tree view
         lsblk | awk '{print "  " $0}'
         echo ""
- 
+
         echo "[ USB DEVICES ]"
-        # lsusb lists all connected USB devices
         lsusb 2>/dev/null | awk '{print "  " $0}' || echo "  lsusb not available"
         echo ""
- 
+
         echo "[ MOTHERBOARD ]"
-        # dmidecode reads hardware info from the BIOS
-        # -t baseboard means we want info about the motherboard only
-        sudo dmidecode -t baseboard 2>/dev/null | grep -i "manufacturer\|product\|version" | \
-            awk '{print "  " $0}' || echo "  dmidecode not available"
+        # dmidecode needs root — || true so we don't crash without it
+        dmidecode -t baseboard 2>/dev/null | grep -i "manufacturer\|product\|version" | \
+            awk '{print "  " $0}' || echo "  dmidecode not available or requires root"
         echo ""
- 
+
         echo "━━━ NETWORK ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
- 
+
         echo "[ IP ADDRESSES ]"
-        ip a | grep "inet " | awk '{print "  " $2}'
+        ip a | grep "inet " | awk '{print "  " $2}' || true
         echo ""
- 
+
         echo "[ MAC ADDRESSES ]"
-        # ip link shows network interfaces with MAC addresses
-        ip link | grep "link/ether" | awk '{print "  " $2}'
+        ip link | grep "link/ether" | awk '{print "  " $2}' || true
         echo ""
- 
+
         echo "[ DEFAULT GATEWAY ]"
-        # ip route shows routing table, grep finds the default gateway line
-        ip route | grep default | awk '{print "  " $3}'
+        ip route | grep default | awk '{print "  " $3}' || true
         echo ""
- 
+
         echo "[ DNS SERVERS ]"
-        grep "nameserver" /etc/resolv.conf | awk '{print "  " $2}'
+        grep "nameserver" /etc/resolv.conf | awk '{print "  " $2}' || true
         echo ""
- 
+
         echo "━━━ SOFTWARE & OS ━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
- 
+
         echo "[ OS INFO ]"
-        # about cut Splits the line at the equals sign (=) and keeps the second part (the name). 
-        # tr -d '"' removes the quotation marks for a cleaner look.
         echo "  OS       : $(grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"')"
         echo "  Kernel   : $(uname -r)"
         echo "  Arch     : $(uname -m)"
         echo "  Uptime   : $(uptime -p)"
         echo ""
- 
+
         echo "[ LOGGED IN USERS ]"
         who | awk '{print "  " $0}'
         echo ""
- 
+
         echo "[ RUNNING SERVICES ]"
-        # systemctl lists all active services
-        #systemctl list-units → lists all system services
-        #--type=service → only show services
-        #--state=running → only show ones that are currently running
-        # head -20 shows only the first 20 to keep it clean
         systemctl list-units --type=service --state=running 2>/dev/null | \
             head -20 | awk '{print "  " $0}'
         echo ""
- 
+
         echo "[ ACTIVE PROCESSES (Top 10 by CPU) ]"
-        # ps aux lists all processes
-        # sort by CPU column (3rd), show top 10
         ps aux --sort=-%cpu | head -11 | awk '{print "  " $0}'
         echo ""
- 
+
         echo "[ OPEN PORTS ]"
-        # ss -tuln shows all open TCP/UDP ports
-        # if ss is not available, fallback to netstat
         ss -tuln 2>/dev/null | awk '{print "  " $0}' || \
-            netstat -tuln 2>/dev/null | awk '{print "  " $0}'
+            netstat -tuln 2>/dev/null | awk '{print "  " $0}' || true
         echo ""
- 
+
         echo "[ INSTALLED PACKAGES COUNT ]"
-        
-        #commrnd -v dpkg checks if dpkg is available Debian Ubuntu
-        # Count how many packages are installed
-        #elif checks if rpm is available RedHat
-        # works on Debian/Ubuntu (dpkg) or RedHat (rpm)
         if command -v dpkg &>/dev/null; then
             echo "  Total packages (dpkg): $(dpkg -l | grep -c '^ii')"
         elif command -v rpm &>/dev/null; then
@@ -248,22 +194,20 @@ generate_full_report() {
             echo "  Package manager not detected"
         fi
         echo ""
- 
+
         echo "=============================================="
         echo "  END OF FULL REPORT"
         echo "=============================================="
- 
+
     } > "$txt_file"
- 
-    # ── HTML VERSION ─────────────────────────────────────────
+
+    # ── HTML ──────────────────────────────────────────────
     {
-        # Write a basic HTML page structure
         echo "<!DOCTYPE html>"
         echo "<html lang='en'>"
         echo "<head>"
         echo "  <meta charset='UTF-8'>"
         echo "  <title>Linux Audit Report</title>"
-        # Inline CSS to make the page look professional
         echo "  <style>"
         echo "    body { font-family: monospace; background: #0d1117; color: #c9d1d9; padding: 20px; }"
         echo "    h1 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 10px; }"
@@ -274,45 +218,43 @@ generate_full_report() {
         echo "  </style>"
         echo "</head>"
         echo "<body>"
-        echo "  <h1>🛡 Linux System Audit — Full Report</h1>"
+        echo "  <h1>&#127697; Linux System Audit — Full Report</h1>"
         echo "  <p class='info'>Date: $(date '+%A, %d %B %Y — %H:%M:%S')</p>"
         echo "  <p class='info'>Hostname: $(hostname) | User: $(whoami)</p>"
- 
+
         echo "  <h2>CPU</h2><pre>"
         grep 'model name\|cpu MHz' /proc/cpuinfo | sort -u
         echo "  </pre>"
- 
+
         echo "  <h2>Memory</h2><pre>"
         free -h
         echo "  </pre>"
- 
+
         echo "  <h2>Disk</h2><pre>"
         df -h
         echo "  </pre>"
- 
+
         echo "  <h2>Network</h2><pre>"
-        ip a | grep "inet "
+        ip a | grep "inet " || true
         echo "  </pre>"
- 
+
         echo "  <h2>Open Ports</h2><pre>"
-        ss -tuln 2>/dev/null || netstat -tuln 2>/dev/null
+        ss -tuln 2>/dev/null || netstat -tuln 2>/dev/null || true
         echo "  </pre>"
- 
+
         echo "  <h2>Running Services</h2><pre>"
         systemctl list-units --type=service --state=running 2>/dev/null | head -20
         echo "  </pre>"
- 
+
         echo "  <p class='footer'>Generated by Linux Audit Tool — NSCS 2025/2026</p>"
         echo "</body>"
         echo "</html>"
- 
+
     } > "$html_file"
- 
-    # ── JSON VERSION ─────────────────────────────────────────
+
+    # ── JSON ──────────────────────────────────────────────
     {
-        # Write a JSON object with key system information
         echo "{"
-        # jq-style manual JSON — we build it with echo
         echo "  \"report_type\": \"full\","
         echo "  \"generated_at\": \"$(date '+%Y-%m-%dT%H:%M:%S')\","
         echo "  \"hostname\": \"$(hostname)\","
@@ -322,61 +264,149 @@ generate_full_report() {
         echo "  \"architecture\": \"$(uname -m)\","
         echo "  \"cpu_model\": \"$(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)\","
         echo "  \"cpu_cores\": $(nproc),"
-        # RAM total — get numbers only (remove unit)
+        # free -h gives human-readable values like "15G" — that is the intended format here
         echo "  \"ram_total\": \"$(free -h | awk '/^Mem:/ {print $2}')\","
         echo "  \"ram_used\": \"$(free -h | awk '/^Mem:/ {print $3}')\","
         echo "  \"uptime\": \"$(uptime -p)\""
         echo "}"
- 
+
     } > "$json_file"
- 
-    # Tell the user all 3 files were saved
+
     echo -e "  ${GREEN}Full report saved:${RESET}"
     echo -e "  TXT  → $txt_file"
     echo -e "  HTML → $html_file"
     echo -e "  JSON → $json_file"
     echo ""
 }
- 
+
+
+# ── CPU ALERT CHECK ───────────────────────────────────────────
 check_cpu_alert() {
- 
     echo -e "${CYAN}${BOLD}  [ CPU Alert Check ]${RESET}"
     echo ""
- 
-    # top -bn1 runs top once (not interactive)
-    # grep finds the CPU line
-    # awk extracts the idle percentage (how much CPU is FREE)
-    #tr -d '%,' → remove the % and , characters to get a clean number
+
+    # top -bn1 runs one iteration then exits
+    # The idle % column label differs by distro — we grab the number after "id,"
+    # which is the standard format in most top versions
     local cpu_idle
-    cpu_idle=$(top -bn1 | grep "Cpu(s)" | awk '{print $8}' | tr -d '%,')
- 
-    # Calculate how much CPU is USED = 100 - idle
-    # bc is a calculator tool in bash
+    cpu_idle=$(top -bn1 | grep -i "cpu" | grep -oP '\d+\.\d+(?=\s*id)' | head -1)
+
+    # Fallback: if top didn't give us what we need, use /proc/stat instead
+    if [[ -z "$cpu_idle" ]]; then
+        log_warn "Could not parse CPU idle from top — reading /proc/stat instead"
+        local idle total
+        read -r _ user nice system idle iowait irq softirq < /proc/stat
+        total=$(( user + nice + system + idle + iowait + irq + softirq ))
+        # scale=2 gives two decimal places
+        cpu_idle=$(awk "BEGIN {printf \"%.2f\", ($idle / $total) * 100}")
+    fi
+
     local cpu_used
-    cpu_used=$(echo "100 - $cpu_idle" | bc)
- 
+    cpu_used=$(awk "BEGIN {printf \"%.0f\", 100 - $cpu_idle}")
+
     echo -e "  ${YELLOW}Current CPU Usage: ${cpu_used}%${RESET}"
     echo -e "  ${YELLOW}Alert Threshold  : ${CPU_THRESHOLD}%${RESET}"
     echo ""
-}
- check_cpu_alert() {
 
-    # Compare cpu_used with the threshold
-    # -gt means greater than
-    if (( $(echo "$cpu_used > $CPU_THRESHOLD" | bc -l) )); then
-        # CPU is too high — show a red warning
-        echo -e "  ${RED}⚠  WARNING: CPU usage is above ${CPU_THRESHOLD}%!${RESET}"
-        echo -e "  ${RED}   Consider checking running processes.${RESET}"
+    # awk handles the float comparison — no dependency on bc
+    if awk "BEGIN {exit !($cpu_used > $CPU_THRESHOLD)}"; then
+        echo -e "  ${RED}WARNING: CPU usage is above ${CPU_THRESHOLD}%!${RESET}"
+        echo -e "  ${RED}Consider checking running processes.${RESET}"
         echo ""
- 
-        # Log the alert into a file for records
         local log_file="$REPORT_DIR/cpu_alerts.log"
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] CPU ALERT — Usage: ${cpu_used}% (Threshold: ${CPU_THRESHOLD}%)" >> "$log_file"
         echo -e "  ${YELLOW}Alert logged to: $log_file${RESET}"
     else
-        # CPU is fine — show a green ok message
-        echo -e "  ${GREEN}✔  CPU usage is normal (${cpu_used}% < ${CPU_THRESHOLD}%)${RESET}"
+        echo -e "  ${GREEN}CPU usage is normal (${cpu_used}% < ${CPU_THRESHOLD}%)${RESET}"
     fi
     echo ""
 }
- 
+
+
+# ── COMPARE REPORTS ───────────────────────────────────────────
+compare_reports() {
+    echo -e "${CYAN}${BOLD}  [ Compare Two Reports ]${RESET}"
+    echo ""
+
+    if ! check_command diff; then
+        log_error "diff not found — cannot compare reports."
+        return 1
+    fi
+
+    # List available txt reports so the user can pick from them
+    echo -e "  ${YELLOW}Available reports in $REPORT_DIR:${RESET}"
+    # || true in case the directory is empty
+    ls "$REPORT_DIR"/*.txt 2>/dev/null | awk '{print "  " NR ") " $0}' || true
+    echo ""
+
+    echo -ne "  ${CYAN}Enter path to FIRST report : ${RESET}"
+    read -r report1
+
+    echo -ne "  ${CYAN}Enter path to SECOND report: ${RESET}"
+    read -r report2
+
+    if [[ ! -f "$report1" ]]; then
+        echo -e "  ${RED}[ERROR] File not found: $report1${RESET}"
+        return 1
+    fi
+
+    if [[ ! -f "$report2" ]]; then
+        echo -e "  ${RED}[ERROR] File not found: $report2${RESET}"
+        return 1
+    fi
+
+    echo ""
+    echo -e "  ${YELLOW}Differences between reports:${RESET}"
+    echo ""
+
+    # diff returns 1 when files differ — that's expected, not an error
+    diff --color=always "$report1" "$report2" || true
+    echo ""
+}
+
+
+# ── VERIFY LOG INTEGRITY ──────────────────────────────────────
+verify_integrity() {
+    echo -e "${CYAN}${BOLD}  [ Log Integrity Verification ]${RESET}"
+    echo ""
+
+    if ! check_command sha256sum; then
+        log_error "sha256sum not found — cannot verify integrity."
+        return 1
+    fi
+
+    local checksum_file="$REPORT_DIR/checksums.sha256"
+
+    echo -e "  ${YELLOW}[1]${RESET} Generate checksums for all current reports"
+    echo -e "  ${YELLOW}[2]${RESET} Verify reports against saved checksums"
+    echo ""
+    echo -ne "  ${CYAN}Enter your choice [1-2]: ${RESET}"
+    read -r integrity_choice
+
+    case "$integrity_choice" in
+        1)
+            # Generate a fresh checksum file from all txt/html/json reports
+            sha256sum "$REPORT_DIR"/*.txt "$REPORT_DIR"/*.html "$REPORT_DIR"/*.json \
+                2>/dev/null > "$checksum_file" || true
+            echo -e "  ${GREEN}Checksums saved to: $checksum_file${RESET}"
+            ;;
+        2)
+            if [[ ! -f "$checksum_file" ]]; then
+                echo -e "  ${RED}[ERROR] No checksum file found. Generate checksums first.${RESET}"
+                return 1
+            fi
+            echo ""
+            # sha256sum -c exits 1 if anything has changed — that's the point
+            if sha256sum -c "$checksum_file" 2>/dev/null; then
+                echo -e "\n  ${GREEN}All files verified — no tampering detected.${RESET}"
+            else
+                echo -e "\n  ${RED}WARNING: One or more files have been modified!${RESET}"
+            fi
+            ;;
+        *)
+            echo -e "  ${RED}Invalid choice.${RESET}"
+            return 1
+            ;;
+    esac
+    echo ""
+}

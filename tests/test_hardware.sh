@@ -2,38 +2,47 @@
 # =============================================================
 # test_hardware.sh - Tests for hardware audit module
 # =============================================================
-source "$(dirname "$0")/../scripts/utils.sh"
-source "$(dirname "$0")/../scripts/hardware_audit.sh"
+
+# Pull in the external files
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/utils.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/hardware_audit.sh"
+
+# -------------------------------------------------------------
+# MOCKING VISUALS
+# -------------------------------------------------------------
+# Overriding printing functions so we actually test if commands produced real output,
+# rather than just successfully printing the string "===== CPU INFORMATION ====="
+print_section() { :; }
+log_info() { :; }
+log_error() { :; }
+log_warn() { :; }
+separator() { :; }
 
 # -------------------------------------------------------------
 # TEST HELPER FUNCTIONS
 # -------------------------------------------------------------
-# counts how many tests passed and failed
 TESTS_PASSED=0
 TESTS_FAILED=0
 
-# assert function — like assert() in C
 assert() {
     # $1 = test name, $2 = expected, $3 = actual
     if [ "$2" = "$3" ]; then
-        echo -e "${GREEN}[PASS]${RESET} $1"
+        echo -e "\033[0;32m[PASS]\033[0m $1"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}[FAIL]${RESET} $1"
+        echo -e "\033[0;31m[FAIL]\033[0m $1"
         echo -e "       Expected : $2"
         echo -e "       Got      : $3"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
 
-# assert_not_empty — checks that a function returns something
 assert_not_empty() {
-    # $1 = test name, $2 = actual value
     if [ -n "$2" ]; then
-        echo -e "${GREEN}[PASS]${RESET} $1"
+        echo -e "\033[0;32m[PASS]\033[0m $1"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}[FAIL]${RESET} $1 — output was empty"
+        echo -e "\033[0;31m[FAIL]\033[0m $1 — output was empty (command failed or no data)"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
@@ -42,56 +51,53 @@ assert_not_empty() {
 # TESTS
 # -------------------------------------------------------------
 test_cpu_info() {
-    print_section "TESTING CPU INFO"
-    # capture output of get_cpu_info
     output=$(get_cpu_info 2>/dev/null)
-    assert_not_empty "get_cpu_info returns output" "$output"
+    assert_not_empty "get_cpu_info retrieves valid CPU hardware data" "$output"
 }
 
 test_gpu_info() {
-    print_section "TESTING GPU INFO"
     output=$(get_gpu_info 2>/dev/null)
-    # GPU might not exist so we just check function runs without crashing
-    assert "get_gpu_info exits successfully" "0" "$?"
+    # Check that it either outputs something about a GPU, or the fallback string
+    # Without the mocked functions, it would always print the log header
+    assert_not_empty "get_gpu_info retrieves valid GPU data or proper fallback" "$output"
 }
 
 test_ram_info() {
-    print_section "TESTING RAM INFO"
     output=$(get_ram_info 2>/dev/null)
-    assert_not_empty "get_ram_info returns output" "$output"
+    assert_not_empty "get_ram_info retrieves valid RAM data" "$output"
 }
 
 test_disk_info() {
-    print_section "TESTING DISK INFO"
     output=$(get_disk_info 2>/dev/null)
-    assert_not_empty "get_disk_info returns output" "$output"
+    assert_not_empty "get_disk_info retrieves valid partition data" "$output"
 }
 
 test_network_info() {
-    print_section "TESTING NETWORK INFO"
     output=$(get_network_info 2>/dev/null)
-    assert_not_empty "get_network_info returns output" "$output"
+    assert_not_empty "get_network_info retrieves valid network data" "$output"
 }
 
 test_motherboard_info() {
-    print_section "TESTING MOTHERBOARD INFO"
-    # motherboard info might fail without root so just check it runs
-    get_motherboard_info 2>/dev/null
-    assert "get_motherboard_info exits without crashing" "0" "$?"
+    output=$(get_motherboard_info 2>/dev/null)
+    # Since dmidecode usually needs root, if it's run without root and failed,
+    # the function might genuinely print nothing if the warning logger is mocked
+    # We use an assertion that doesn't instantly fail here if empty unless we literally got nothing
+    # Actually wait — checking exit code is safer here if it's just checking the function handles it.
+    get_motherboard_info &>/dev/null
+    assert "get_motherboard_info exits safely (with or without root)" "0" "$?"
 }
 
 test_usb_info() {
-    print_section "TESTING USB INFO"
-    output=$(get_usb_info 2>/dev/null)
-    assert "get_usb_info exits successfully" "0" "$?"
+    get_usb_info &>/dev/null
+    assert "get_usb_info exits safely" "0" "$?"
 }
 
 # -------------------------------------------------------------
 # MAIN - run all tests
 # -------------------------------------------------------------
-separator
+echo "============================================================"
 echo "        HARDWARE AUDIT TESTS"
-separator
+echo "============================================================"
 
 test_cpu_info
 test_gpu_info
@@ -101,6 +107,11 @@ test_network_info
 test_motherboard_info
 test_usb_info
 
-separator
-echo -e "Results: ${GREEN}$TESTS_PASSED passed${RESET} / ${RED}$TESTS_FAILED failed${RESET}"
-separator
+echo "============================================================"
+echo -e "Results: \033[0;32m$TESTS_PASSED passed\033[0m / \033[0;31m$TESTS_FAILED failed\033[0m"
+echo "============================================================"
+
+if [ "$TESTS_FAILED" -gt 0 ]; then
+    exit 1
+fi
+exit 0

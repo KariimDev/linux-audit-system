@@ -1,17 +1,10 @@
 #!/usr/bin/env bash
- 
-# -e Stop the script if any command fails
-# -u Stop if you use a variable you forgot to define
-# -o pipefail Stop if a command inside a pipe | fails
+
 set -euo pipefail
- 
-# Find where THIS script is, works on all machines
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
- 
-# Go one folder up = the project root
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
- 
-# If utils.sh exists load it, if not define colors manually
+
 if [[ -f "$SCRIPT_DIR/utils.sh" ]]; then
     source "$SCRIPT_DIR/utils.sh"
 else
@@ -22,30 +15,26 @@ else
     BOLD='\033[1m'
     RESET='\033[0m'
 fi
- 
-# Load the email config file if it exists
-# email.conf contains: RECIPIENT_EMAIL, SENDER_EMAIL, SMTP settings
+
+# Load email config — the file defines RECIPIENT_EMAIL and SENDER_EMAIL
 if [[ -f "$PROJECT_ROOT/config/email.conf" ]]; then
     source "$PROJECT_ROOT/config/email.conf"
 else
-    
+    # Provide safe defaults so the script doesn't crash with set -u
     RECIPIENT_EMAIL="admin@example.com"
     SENDER_EMAIL="audit@example.com"
 fi
- 
+
 if [[ -f "$PROJECT_ROOT/config/audit.conf" ]]; then
     source "$PROJECT_ROOT/config/audit.conf"
 else
-    REPORT_DIR="/var/log/sys_audit"
+    REPORT_DIR="$PROJECT_ROOT/reports"
 fi
- 
-# Check which email tool is available
-# Returns the tool name: msmtp, sendmail, or mail
+
+# Check which email tool is available on this machine
 detect_mail_tool() {
-    # Check for msmtp if it is installed
     if command -v msmtp &>/dev/null; then
         echo "msmtp"
-    # Check for sendmail if msmtp not found
     elif command -v sendmail &>/dev/null; then
         echo "sendmail"
     elif command -v mail &>/dev/null; then
@@ -54,23 +43,19 @@ detect_mail_tool() {
         echo "none"
     fi
 }
- 
+
 get_latest_report() {
-    # ls -t sorts by newest first
-    # head -1 picks only the most recent file
-    # 2>/dev/null hides errors if no files exist yet
-    ls -t "$REPORT_DIR"/*.txt 2>/dev/null | head -1
+    # ls -t sorts newest first — || true so it doesn't crash when the dir is empty
+    ls -t "$REPORT_DIR"/*.txt 2>/dev/null | head -1 || true
 }
- 
+
 send_report() {
- 
     echo -e "${CYAN}${BOLD}  [ Email Report Sender ]${RESET}"
     echo ""
- 
+
     local mail_tool
     mail_tool=$(detect_mail_tool)
- 
-    # If no email tool is found show error and stop
+
     if [[ "$mail_tool" == "none" ]]; then
         echo -e "  ${RED}[ERROR] No email tool found.${RESET}"
         echo -e "  ${YELLOW}Install one using:${RESET}"
@@ -78,10 +63,10 @@ send_report() {
         echo ""
         return 1
     fi
- 
+
     echo -e "  ${GREEN}Email tool detected:${RESET} $mail_tool"
     echo ""
- 
+
     echo -e "  ${YELLOW}Which report do you want to send?${RESET}"
     echo -e "  ${GREEN}[1]${RESET} Short Report (.txt)"
     echo -e "  ${GREEN}[2]${RESET} Full Report  (.txt)"
@@ -89,51 +74,51 @@ send_report() {
     echo ""
     echo -ne "  ${CYAN}Enter your choice [1-3]: ${RESET}"
     read -r report_choice
- 
+
     local report_file=""
- 
+
     case "$report_choice" in
         1)
-            report_file=$(ls -t "$REPORT_DIR"/short_report_*.txt 2>/dev/null | head -1)
+            # || true prevents set -e from dying when ls finds no files
+            report_file=$(ls -t "$REPORT_DIR"/short_report_*.txt 2>/dev/null | head -1 || true)
             ;;
         2)
-            report_file=$(ls -t "$REPORT_DIR"/full_report_*.txt 2>/dev/null | head -1)
+            report_file=$(ls -t "$REPORT_DIR"/full_report_*.txt 2>/dev/null | head -1 || true)
             ;;
         3)
-            report_file=$(ls -t "$REPORT_DIR"/full_report_*.html 2>/dev/null | head -1)
+            report_file=$(ls -t "$REPORT_DIR"/full_report_*.html 2>/dev/null | head -1 || true)
             ;;
         *)
             echo -e "  ${RED}Invalid choice.${RESET}"
             return 1
             ;;
     esac
- 
- -- #-z checks if the variable is empty true if the varialble is empty, -f checks if the file exists
+
     if [[ -z "$report_file" || ! -f "$report_file" ]]; then
         echo -e "  ${RED}[ERROR] No report found. Generate a report first.${RESET}"
         echo ""
         return 1
     fi
- 
+
     echo -e "  ${GREEN}Report file found:${RESET} $report_file"
     echo ""
- 
-    # Ask user to confirm the recipient email
+
     echo -e "  ${YELLOW}Sending to:${RESET} $RECIPIENT_EMAIL"
     echo -ne "  ${CYAN}Confirm? [y/n]: ${RESET}"
     read -r confirm
- 
+
     if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
         echo -e "  ${YELLOW}Email cancelled.${RESET}"
         echo ""
         return 0
     fi
- 
-    #Build email subject with hostname and date for better identification in inbox
+
     local subject="Linux Audit Report — $(hostname) — $(date '+%Y-%m-%d %H:%M')"
-     echo -e "  ${YELLOW}Sending email...${RESET}"
+    echo -e "  ${YELLOW}Sending email...${RESET}"
     echo ""
- 
+
+    local send_ok=0
+
     if [[ "$mail_tool" == "msmtp" ]]; then
         {
             echo "To: $RECIPIENT_EMAIL"
@@ -141,24 +126,24 @@ send_report() {
             echo "Subject: $subject"
             echo ""
             cat "$report_file"
-        } | msmtp "$RECIPIENT_EMAIL"
- 
+        } | msmtp "$RECIPIENT_EMAIL" && send_ok=1 || send_ok=0
+
     elif [[ "$mail_tool" == "sendmail" ]]; then
         {
             echo "To: $RECIPIENT_EMAIL"
             echo "Subject: $subject"
             echo ""
             cat "$report_file"
-        } | sendmail -v "$RECIPIENT_EMAIL"
- 
+        } | sendmail -v "$RECIPIENT_EMAIL" && send_ok=1 || send_ok=0
+
     elif [[ "$mail_tool" == "mail" ]]; then
-        mail -s "$subject" -A "$report_file" "$RECIPIENT_EMAIL" < /dev/null
+        # -a is the portable attachment flag for most mail implementations
+        # If you're on mailutils use -A, on bsd-mailx use -a
+        mail -s "$subject" -a "$report_file" "$RECIPIENT_EMAIL" < /dev/null && send_ok=1 || send_ok=0
     fi
- 
-    # $? is the exit code of the last command — 0 means success
-    if [[ $? -eq 0 ]]; then
+
+    if [[ "$send_ok" -eq 1 ]]; then
         echo -e "  ${GREEN}✔  Email sent successfully to: $RECIPIENT_EMAIL${RESET}"
- 
         local log_file="$REPORT_DIR/email_log.txt"
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Email sent to $RECIPIENT_EMAIL | File: $report_file" >> "$log_file"
         echo -e "  ${YELLOW}Logged to: $log_file${RESET}"
@@ -166,7 +151,6 @@ send_report() {
         echo -e "  ${RED}[ERROR] Failed to send email.${RESET}"
         echo -e "  ${YELLOW}Check your email configuration in config/email.conf${RESET}"
     fi
- 
+
     echo ""
 }
- 

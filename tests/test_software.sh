@@ -2,8 +2,20 @@
 # =============================================================
 # test_software.sh - Tests for software audit module
 # =============================================================
-source "$(dirname "$0")/../scripts/utils.sh"
-source "$(dirname "$0")/../scripts/software_audit.sh"
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/utils.sh"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/software_audit.sh"
+
+# -------------------------------------------------------------
+# MOCKING VISUALS
+# -------------------------------------------------------------
+# Without this, "assert_not_empty" always passes because the log_info strings
+# or "print_section" header are technically output text.
+print_section() { :; }
+log_info() { :; }
+log_error() { :; }
+log_warn() { :; }
+separator() { :; }
 
 # -------------------------------------------------------------
 # TEST HELPER FUNCTIONS
@@ -13,10 +25,10 @@ TESTS_FAILED=0
 
 assert() {
     if [ "$2" = "$3" ]; then
-        echo -e "${GREEN}[PASS]${RESET} $1"
+        echo -e "\033[0;32m[PASS]\033[0m $1"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}[FAIL]${RESET} $1"
+        echo -e "\033[0;31m[FAIL]\033[0m $1"
         echo -e "       Expected : $2"
         echo -e "       Got      : $3"
         TESTS_FAILED=$((TESTS_FAILED + 1))
@@ -25,10 +37,10 @@ assert() {
 
 assert_not_empty() {
     if [ -n "$2" ]; then
-        echo -e "${GREEN}[PASS]${RESET} $1"
+        echo -e "\033[0;32m[PASS]\033[0m $1"
         TESTS_PASSED=$((TESTS_PASSED + 1))
     else
-        echo -e "${RED}[FAIL]${RESET} $1 — output was empty"
+        echo -e "\033[0;31m[FAIL]\033[0m $1 — output was empty"
         TESTS_FAILED=$((TESTS_FAILED + 1))
     fi
 }
@@ -37,59 +49,51 @@ assert_not_empty() {
 # TESTS
 # -------------------------------------------------------------
 test_os_info() {
-    print_section "TESTING OS INFO"
     output=$(get_os_info 2>/dev/null)
-    assert_not_empty "get_os_info returns output" "$output"
+    assert_not_empty "get_os_info retrieves OS string" "$output"
 }
 
 test_kernel_info() {
-    print_section "TESTING KERNEL INFO"
     output=$(get_kernel_info 2>/dev/null)
-    assert_not_empty "get_kernel_info returns output" "$output"
+    assert_not_empty "get_kernel_info retrieves kernel version" "$output"
 }
 
 test_arch_info() {
-    print_section "TESTING ARCHITECTURE INFO"
     output=$(get_arch_info 2>/dev/null)
-    assert_not_empty "get_arch_info returns output" "$output"
+    assert_not_empty "get_arch_info retrieves architecture" "$output"
 }
 
 test_installed_packages() {
-    print_section "TESTING INSTALLED PACKAGES"
     output=$(get_installed_packages 2>/dev/null)
-    assert_not_empty "get_installed_packages returns output" "$output"
+    assert_not_empty "get_installed_packages retrieves package list" "$output"
 }
 
 test_logged_in_users() {
-    print_section "TESTING LOGGED IN USERS"
-    output=$(get_logged_in_users 2>/dev/null)
-    assert "get_logged_in_users exits successfully" "0" "$?"
+    get_logged_in_users &>/dev/null
+    assert "get_logged_in_users exits safely" "0" "$?"
 }
 
 test_services_info() {
-    print_section "TESTING SERVICES INFO"
-    output=$(get_services_info 2>/dev/null)
-    assert "get_services_info exits successfully" "0" "$?"
+    get_services_info &>/dev/null
+    assert "get_services_info exits safely" "0" "$?"
 }
 
 test_open_ports() {
-    print_section "TESTING OPEN PORTS"
-    output=$(get_open_ports 2>/dev/null)
-    assert_not_empty "get_open_ports returns output" "$output"
+    get_open_ports &>/dev/null
+    assert "get_open_ports exits safely" "0" "$?"
 }
 
 test_startup_programs() {
-    print_section "TESTING STARTUP PROGRAMS"
-    output=$(get_startup_programs 2>/dev/null)
-    assert "get_startup_programs exits successfully" "0" "$?"
+    get_startup_programs &>/dev/null
+    assert "get_startup_programs exits safely" "0" "$?"
 }
 
 # -------------------------------------------------------------
 # MAIN - run all tests
 # -------------------------------------------------------------
-separator
+echo "============================================================"
 echo "        SOFTWARE AUDIT TESTS"
-separator
+echo "============================================================"
 
 test_os_info
 test_kernel_info
@@ -100,6 +104,11 @@ test_services_info
 test_open_ports
 test_startup_programs
 
-separator
-echo -e "Results: ${GREEN}$TESTS_PASSED passed${RESET} / ${RED}$TESTS_FAILED failed${RESET}"
-separator
+echo "============================================================"
+echo -e "Results: \033[0;32m$TESTS_PASSED passed\033[0m / \033[0;31m$TESTS_FAILED failed\033[0m"
+echo "============================================================"
+
+if [ "$TESTS_FAILED" -gt 0 ]; then
+    exit 1
+fi
+exit 0

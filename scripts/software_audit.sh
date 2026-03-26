@@ -1,17 +1,16 @@
 #!/bin/bash
-
-# =============================================================
 # software_audit.sh - Audits installed software and package information
-#==============================================================
-source "$(dirname "$0")/utils.sh"
+# Author: Karim
 
-#OS name and version
+# BASH_SOURCE[0] always refers to this file, not the caller
+# Needed so the path is correct when sourced from main.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/utils.sh"
+
+# OS name and version
 get_os_info() {
     print_section "OPERATING SYSTEM INFORMATION"
     if ! check_command lsb_release; then
         log_warn "lsb_release not found, trying /etc/os-release..."
-
-        #[] are equal to test, and -f checks if the file exists. If /etc/os-release exists.
         if [ -f /etc/os-release ]; then
             grep -E 'PRETTY_NAME|VERSION' /etc/os-release
         else
@@ -46,7 +45,7 @@ get_arch_info() {
     uname -m
 }
 
-#Installed packages
+# Installed packages
 get_installed_packages() {
     print_section "INSTALLED PACKAGES"
     if check_command dpkg; then
@@ -61,7 +60,7 @@ get_installed_packages() {
     fi
 }
 
-#Logged-in users
+# Logged-in users
 get_logged_in_users() {
     print_section "LOGGED-IN USERS"
     if ! check_command who; then
@@ -72,7 +71,7 @@ get_logged_in_users() {
     who
 }
 
-#Running services and Active processes
+# Running services and active processes
 get_services_info() {
     print_section "SERVICES AND PROCESSES"
     if check_command systemctl; then
@@ -80,7 +79,8 @@ get_services_info() {
         systemctl list-units --type=service --state=running
     elif check_command service; then
         log_info "Running services (service):"
-        service --status-all 2>/dev/null | grep '+'
+        # || true because grep exits 1 when nothing matches — don't let set -e kill us
+        service --status-all 2>/dev/null | grep '+' || true
     else
         log_error "No supported service manager found."
         return 1
@@ -95,12 +95,12 @@ get_services_info() {
     fi
 }
 
-#Open ports
+# Open ports
 get_open_ports() {
     print_section "OPEN PORTS"
     if check_command ss; then
         log_info "Open ports (ss):"
-        #-tuln means: -t for TCP, -u for UDP, -l for listening, and -n for numeric output (don't resolve service names)
+        # -t TCP  -u UDP  -l listening only  -n numeric (no service name resolving)
         ss -tuln
     elif check_command netstat; then
         log_info "Open ports (netstat):"
@@ -111,20 +111,34 @@ get_open_ports() {
     fi
 }
 
-#shows programs that run on boot
+# Programs that start on boot
 get_startup_programs() {
     print_section "STARTUP PROGRAMS"
     if check_command systemctl; then
         log_info "Startup services (systemctl):"
-        #list-unit-files shows all services and their enabled/disabled status, and grep enabled filters only those that are set to start on boot.
-
-        systemctl list-unit-files --type=service | grep enabled
+        # || true because grep returns 1 when nothing matches — safe to ignore here
+        systemctl list-unit-files --type=service | grep enabled || true
     elif check_command chkconfig; then
         log_info "Startup services (chkconfig):"
-        #chkconfig --list shows all services and their runlevel status, and grep '3:on\|4:on\|5:on' filters those that are set to start in the common multi-user runlevels (3, 4, 5).
-        chkconfig --list | grep '3:on\|4:on\|5:on'
+        chkconfig --list | grep '3:on\|4:on\|5:on' || true
     else
         log_error "No supported service manager found."
         return 1
     fi
+}
+
+software_audit() {
+    separator
+    echo "        SOFTWARE AUDIT — $(timestamp)"
+    separator
+    get_os_info
+    get_kernel_info
+    get_arch_info
+    get_installed_packages
+    get_logged_in_users
+    get_services_info
+    get_open_ports
+    get_startup_programs
+    separator
+    log_info "Software audit complete."
 }

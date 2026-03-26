@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
 
-# -e Stop the script if any command fails
-# -u Stop if you use a variable you forgot to define
-# -o pipefail Stop if a command inside a pipe | fails
+# -e  exit on error
+# -u  exit on unbound variable
+# -o pipefail  exit if any command in a pipe fails
 set -euo pipefail
 
-# Find where THIS script is, works on all machines
+# BASH_SOURCE[0] points to main.sh itself, so this always resolves correctly
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Go one folder up = the project root
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-# If utils.sh exists load it, if not define colors manually
 if [[ -f "$SCRIPT_DIR/utils.sh" ]]; then
     source "$SCRIPT_DIR/utils.sh"
 else
@@ -23,10 +20,9 @@ else
     RESET='\033[0m'
 fi
 
-# this is a function like mini script in the script
 print_banner() {
     clear
-    # switch ON cyan + bold color this is like a switsh on off for colors
+    # switch ON cyan + bold color — like a switch on/off for colors
     echo -e "${CYAN}${BOLD}"
     echo "  ================================================"
     echo "       Linux System Audit & Monitoring Tool"
@@ -34,12 +30,10 @@ print_banner() {
     echo "  ================================================"
     # switch OFF all colors
     echo -e "${RESET}"
-    # Print current date and time in yellow → Saturday, 21 March 2026 — 14:35:02
     echo -e "${YELLOW}   $(date '+%A, %d %B %Y — %H:%M:%S')${RESET}"
     echo ""
 }
 
-# print the main menu options
 print_menu() {
     echo -e "${CYAN}${BOLD}  Select an option:${RESET}"
     echo ""
@@ -56,39 +50,47 @@ print_menu() {
     echo ""
 }
 
-# a function to pause and wait for user to press Enter
+# Pause and wait for the user to press Enter
 press_enter() {
     echo ""
     echo -e "  ${YELLOW}Press Enter to return to the menu...${RESET}"
     read -r
 }
 
-# a function to source Person A scripts safely
+# Load hardware_audit.sh and software_audit.sh once at startup
+# Sourcing inside the loop every iteration was wasteful and could cause side effects
 load_modules() {
     local modules=("hardware_audit.sh" "software_audit.sh")
-    #[@] means all elements
     for module in "${modules[@]}"; do
         if [[ -f "$SCRIPT_DIR/$module" ]]; then
-        #Checks if the file exists at the path $SCRIPT_DIR/$module
-        #-f is this a regular file not a directory, symlink, etc
-        #Loads and executes the module file in the current shell context.
-        #source (same as .) means the module's variables and functions become available to the current script — unlike running it as a subprocess.
             source "$SCRIPT_DIR/$module"
         else
-            echo -e "${RED}  error missing module: $module${RESET}"
+            echo -e "${RED}  error: missing module: $module${RESET}"
         fi
     done
 }
 
-# keeps the menu alive until user exits
+# Source all other scripts once up front as well — NOT inside the menu loop
+# This avoids re-running global setup code (mkdir, config loading) on every keypress
+load_optional_modules() {
+    local optional=("report_generator.sh" "email_sender.sh" "remote_monitor.sh")
+    for module in "${optional[@]}"; do
+        if [[ -f "$SCRIPT_DIR/$module" ]]; then
+            source "$SCRIPT_DIR/$module"
+        else
+            echo -e "${RED}  warning: optional module missing: $module${RESET}"
+        fi
+    done
+}
+
 main() {
     load_modules
+    load_optional_modules
 
     while true; do
         print_banner
         print_menu
 
-        # Ask user to pick an option
         echo -ne "  ${CYAN}Enter your choice [0-9]: ${RESET}"
         read -r choice
 
@@ -105,43 +107,36 @@ main() {
                 ;;
             3)
                 print_banner
-                source "$SCRIPT_DIR/report_generator.sh"
                 generate_short_report
                 press_enter
                 ;;
             4)
                 print_banner
-                source "$SCRIPT_DIR/report_generator.sh"
                 generate_full_report
                 press_enter
                 ;;
             5)
                 print_banner
-                source "$SCRIPT_DIR/email_sender.sh"
                 send_report
                 press_enter
                 ;;
             6)
                 print_banner
-                source "$SCRIPT_DIR/remote_monitor.sh"
                 remote_monitor
                 press_enter
                 ;;
             7)
                 print_banner
-                source "$SCRIPT_DIR/report_generator.sh"
                 compare_reports
                 press_enter
                 ;;
             8)
                 print_banner
-                source "$SCRIPT_DIR/report_generator.sh"
                 check_cpu_alert
                 press_enter
                 ;;
             9)
                 print_banner
-                source "$SCRIPT_DIR/report_generator.sh"
                 verify_integrity
                 press_enter
                 ;;
