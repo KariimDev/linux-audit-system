@@ -1,0 +1,85 @@
+==============================================
+   LINUX SYSTEM AUDIT — FULL REPORT
+==============================================
+  Date     : Thursday, 26 March 2026 — 15:56:58
+  Hostname : kali
+  User     : kali
+==============================================
+
+━━━ HARDWARE ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ CPU ]
+  cache size	:  4096 KB
+  cpu MHz		:  1094.399
+  model name	:  Intel(R) Celeron(R) N4120 CPU @ 1.10GHz
+
+[ GPU ]
+  00:02.0 VGA compatible controller: VMware SVGA II Adapter
+
+[ RAM ]
+                 total        used        free      shared  buff/cache   available
+  Mem:           967Mi       732Mi        71Mi        12Mi       303Mi       234Mi
+  Swap:          953Mi       306Mi       647Mi
+
+[ DISK ]
+  NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+  sda      8:0    0 80.1G  0 disk 
+  └─sda1   8:1    0 80.1G  0 part /
+  sr0     11:0    1 50.7M  0 rom  /media/kali/VBox_GAs_7.2.2
+  sr1     11:1    1 50.7M  0 rom  /media/kali/VBox_GAs_7.2.21
+
+[ USB DEVICES ]
+  Bus 001 Device 001: ID 1d6b:0001 Linux Foundation 1.1 root hub
+  Bus 001 Device 002: ID 80ee:0021 VirtualBox USB Tablet
+
+[ MOTHERBOARD ]
+  dmidecode not available or requires root
+
+━━━ NETWORK ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ IP ADDRESSES ]
+  127.0.0.1/8
+  10.0.2.15/24
+
+[ MAC ADDRESSES ]
+  08:00:27:1f:b7:23
+
+[ DEFAULT GATEWAY ]
+  10.0.2.2
+
+[ DNS SERVERS ]
+  192.168.50.15
+
+━━━ SOFTWARE & OS ━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[ OS INFO ]
+  OS       : Kali GNU/Linux Rolling
+  Kernel   : 6.12.38+kali-amd64
+  Arch     : x86_64
+  Uptime   : up 24 minutes
+
+[ LOGGED IN USERS ]
+  kali     seat0        2026-03-26 15:34
+  kali     tty2         2026-03-26 15:34
+
+[ RUNNING SERVICES ]
+    UNIT                           LOAD   ACTIVE SUB     DESCRIPTION
+    accounts-daemon.service        loaded active running Accounts Service
+    colord.service                 loaded active running Manage, Install and Generate Color Profiles
+    cron.service                   loaded active running Regular background program processing daemon
+    dbus.service                   loaded active running D-Bus System Message Bus
+    fwupd.service                  loaded active running Firmware update daemon
+    gdm.service                    loaded active running GNOME Display Manager
+    haveged.service                loaded active running Entropy Daemon based on the HAVEGE algorithm
+    ModemManager.service           loaded active running Modem Manager
+    NetworkManager.service         loaded active running Network Manager
+    pcscd.service                  loaded active running PC/SC Smart Card Daemon
+    polkit.service                 loaded active running Authorization Manager
+    power-profiles-daemon.service  loaded active running Power Profiles daemon
+    rtkit-daemon.service           loaded active running RealtimeKit Scheduling Policy Service
+    systemd-journald.service       loaded active running Journal Service
+    systemd-logind.service         loaded active running User Login Management
+    systemd-oomd.service           loaded active running Userspace Out-Of-Memory (OOM) Killer
+    systemd-udevd.service          loaded active running Rule-based Manager for Device Events and Files
+    udisks2.service                loaded active running Disk Manager
+    upower.service                 loaded active running Daemon for power management

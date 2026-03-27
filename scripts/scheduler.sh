@@ -12,7 +12,7 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # -------------------------------------------------------------
 # VARIABLES
 # -------------------------------------------------------------
-# absolute path to main.sh — cron needs full paths, not relative
+# absolute path to auto_audit.sh — cron needs full paths, not relative
 SCRIPT_PATH="$SCRIPT_DIR/auto_audit.sh"
 CRON_LOG="$PROJECT_ROOT/logs/cron.log"
 

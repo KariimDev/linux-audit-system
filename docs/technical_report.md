@@ -252,7 +252,7 @@ The cron job is managed by `scheduler.sh`. After running `bash scripts/scheduler
 
 The `>>` operator appends execution output to the log file rather than overwriting it, preserving audit history. `2>&1` ensures error output is captured alongside normal output so failures are never lost silently.
 
-> **Screenshot:** See `docs/screenshots/cron_config.png` for a screenshot of the active crontab.
+![Active Crontab](screenshots/crontab.png)
 
 ---
 

@@ -183,6 +183,8 @@ bash scripts/main.sh
 
 You will be presented with the following menu:
 
+![Interactive Menu](docs/screenshots/menu.png)
+
 ```
   ================================================
        Linux System Audit & Monitoring Tool
@@ -283,6 +285,8 @@ The tool supports three email backends, detected automatically:
 
 > **Gmail users:** Generate an [App Password](https://myaccount.google.com/apppasswords) instead of your account password.
 
+![Email Delivered successfully](docs/screenshots/email_sent_seccusfully.png)
+
 ---
 
 ## 🌐 Remote Monitoring via SSH
@@ -331,8 +335,10 @@ crontab -e
 Add the following line:
 
 ```cron
-0 2 * * * /bin/bash /path/to/linux-audit-system/scripts/main.sh >> /var/log/sys_audit/cron.log 2>&1
+0 4 * * * /bin/bash /path/to/linux-audit-system/scripts/auto_audit.sh >> /var/log/sys_audit/cron.log 2>&1
 ```
+
+![Crontab Configuration](docs/screenshots/crontab.png)
 
 Cron execution is logged to `logs/audit.log`.
 
@@ -344,11 +350,15 @@ Cron execution is logged to `logs/audit.log`.
 
 Compares two audit report files and highlights differences using `diff`. Useful for detecting configuration changes or new processes between audit runs.
 
+![Report Comparison Output](docs/screenshots/comparison.png)
+
 ### ⚠️ CPU Alert Check (Option 8)
 
 Reads CPU idle time from `top`, calculates usage, and compares it against `CPU_THRESHOLD` from `audit.conf`. If usage exceeds the threshold:
 - Displays a red warning in the terminal
 - Logs the alert to `cpu_alerts.log`
+
+![CPU Alert Warning](docs/screenshots/cpu_alert.png)
 
 ### 🔒 Log Integrity Verification (Option 9)
 

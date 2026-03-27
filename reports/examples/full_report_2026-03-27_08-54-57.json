@@ -1,0 +1,14 @@
+{
+  "report_type": "full",
+  "generated_at": "2026-03-27T08:55:08",
+  "hostname": "kali",
+  "user": "kali",
+  "os": "Kali GNU/Linux Rolling",
+  "kernel": "6.12.38+kali-amd64",
+  "architecture": "x86_64",
+  "cpu_model": "Intel(R) Celeron(R) N4120 CPU @ 1.10GHz",
+  "cpu_cores": 1,
+  "ram_total": "967Mi",
+  "ram_used": "606Mi",
+  "uptime": "up 14 minutes"
+}
