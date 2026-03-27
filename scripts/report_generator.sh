@@ -262,8 +262,8 @@ generate_full_report() {
         echo "  \"os\": \"$(grep PRETTY_NAME /etc/os-release | cut -d= -f2 | tr -d '"')\","
         echo "  \"kernel\": \"$(uname -r)\","
         echo "  \"architecture\": \"$(uname -m)\","
-        echo "  \"cpu_model\": \"$(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs)\","
-        echo "  \"cpu_cores\": $(nproc),"
+        echo "  \"cpu_model\": \"$(grep 'model name' /proc/cpuinfo | head -1 | cut -d: -f2 | xargs || true)\","
+        echo "  \"cpu_cores\": $(nproc 2>/dev/null || echo 1),"
         # free -h gives human-readable values like "15G" — that is the intended format here
         echo "  \"ram_total\": \"$(free -h | awk '/^Mem:/ {print $2}')\","
         echo "  \"ram_used\": \"$(free -h | awk '/^Mem:/ {print $3}')\","
@@ -289,7 +289,7 @@ check_cpu_alert() {
     # The idle % column label differs by distro — we grab the number after "id,"
     # which is the standard format in most top versions
     local cpu_idle
-    cpu_idle=$(top -bn1 | grep -i "cpu" | grep -oP '\d+\.\d+(?=\s*id)' | head -1)
+    cpu_idle=$(top -bn1 | grep -i "cpu" | grep -oP '\d+\.\d+(?=\s*id)' | head -1 || true)
 
     # Fallback: if top didn't give us what we need, use /proc/stat instead
     if [[ -z "$cpu_idle" ]]; then

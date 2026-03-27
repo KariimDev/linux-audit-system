@@ -96,7 +96,7 @@ who | awk '{print "  " $0}' || true
 echo ""
 
 echo "--- TOP 5 PROCESSES ---"
-ps aux --sort=-%cpu | head -6 | awk '{print "  " $0}'
+ps aux --sort=-%cpu | head -6 | awk '{print "  " $0}' || true
 echo ""
 
 echo "--- OPEN PORTS ---"

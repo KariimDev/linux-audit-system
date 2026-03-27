@@ -145,7 +145,7 @@ Two send functions are provided:
 
 Both functions use the `send_ok=1/0` pattern to track success without relying on `$?`, which is unreliable under `set -euo pipefail`.
 
-Email configuration is documented in `config/email.conf`. For Gmail, an App Password must be generated from Google Account settings since direct password authentication is disabled by Google. The msmtp configuration file at `~/.msmtprc` must be created and secured with `chmod 600` before use.
+Email configuration is stored entirely in `config/email.conf` and includes `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `EMAIL_SENDER`, and `EMAIL_RECIPIENT`. At runtime, the script dynamically constructs a temporary `msmtp` configuration file from those variables, uses it for the current send operation, then immediately deletes it. This means no manual `~/.msmtprc` file is required from the administrator. For Gmail, an App Password must be generated from Google Account settings since direct account password authentication over SMTP is disabled by Google.
 
 ### 3.6 Automation — `scheduler.sh` and `auto_audit.sh`
 

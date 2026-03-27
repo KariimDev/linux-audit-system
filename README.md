@@ -49,8 +49,10 @@ A fully automated Linux system audit and monitoring solution built with pure Bas
 linux-audit-system/
 ├── README.md
 ├── .gitignore
+├── .gitattributes
 ├── scripts/
 │   ├── main.sh               # Interactive menu — entry point
+│   ├── auto_audit.sh         # Silent pipeline — called by cron
 │   ├── hardware_audit.sh     # Hardware data collection
 │   ├── software_audit.sh     # Software & OS data collection
 │   ├── report_generator.sh   # Report generation (txt/html/json)
@@ -74,7 +76,8 @@ linux-audit-system/
 │   ├── design_architecture.md
 │   └── screenshots/
 └── tests/
-    └── .gitkeep
+    ├── test_hardware.sh
+    └── test_software.sh
 ```
 
 ---
@@ -95,7 +98,6 @@ systemd, lsblk, lsusb, lspci, df, free, top, ps, ss
 ```bash
 sudo apt install msmtp msmtp-mta    # Email sending
 sudo apt install openssh-client     # Remote monitoring
-sudo apt install bc                 # CPU alert calculation
 sudo apt install pciutils           # GPU info (lspci)
 sudo apt install usbutils           # USB info (lsusb)
 ```
@@ -158,15 +160,12 @@ CPU_THRESHOLD=80
 ### `config/email.conf`
 
 ```bash
-# Email recipient
-RECIPIENT_EMAIL="admin@example.com"
-
-# Sender address
-SENDER_EMAIL="audit@yourdomain.com"
-
-# SMTP host (for msmtp)
+EMAIL_RECIPIENT="recipient@gmail.com"
+EMAIL_SENDER="your_sender@gmail.com"
+SMTP_USER="your_sender@gmail.com"
+SMTP_PASSWORD="your-app-password"
 SMTP_HOST="smtp.gmail.com"
-SMTP_PORT=587
+SMTP_PORT="587"
 ```
 
 > The email sender automatically detects available tools in this priority order: `msmtp` → `sendmail` → `mail`.
@@ -258,32 +257,21 @@ The tool supports three email backends, detected automatically:
    sudo apt install msmtp msmtp-mta
    ```
 
-2. Create `~/.msmtprc`:
-   ```ini
-   defaults
-   auth           on
-   tls            on
-   tls_trust_file /etc/ssl/certs/ca-certificates.crt
-   logfile        ~/.msmtp.log
-
-   account        gmail
-   host           smtp.gmail.com
-   port           587
-   from           your_email@gmail.com
-   user           your_email@gmail.com
-   password       your_app_password
-
-   account default : gmail
-   ```
-
-3. Secure the file:
+2. Fill in your credentials in `config/email.conf`:
    ```bash
-   chmod 600 ~/.msmtprc
+   EMAIL_RECIPIENT="recipient@gmail.com"
+   EMAIL_SENDER="your_sender@gmail.com"
+   SMTP_USER="your_sender@gmail.com"
+   SMTP_PASSWORD="your-google-app-password"
+   SMTP_HOST="smtp.gmail.com"
+   SMTP_PORT="587"
    ```
 
-4. Configure `config/email.conf` with your recipient address, then use option **[5]** from the main menu.
+3. Select option **[5]** from the main menu to send.
 
-> **Gmail users:** Generate an [App Password](https://myaccount.google.com/apppasswords) instead of your account password.
+> **No manual `~/.msmtprc` file required!** The tool dynamically builds its own temporary configuration from `email.conf` at runtime and securely deletes it afterwards.
+
+> **Gmail users:** Generate an [App Password](https://myaccount.google.com/apppasswords) — Google does not allow direct account password authentication over SMTP.
 
 ![Email Delivered successfully](docs/screenshots/email_sent_seccusfully.png)
 
@@ -318,15 +306,17 @@ The tool tests the connection first, then proceeds if successful. Reports are tr
 
 ## ⏰ Cron Automation
 
-Use `scripts/scheduler.sh` to set up automated audit runs via cron:
+Use `scripts/scheduler.sh` to automatically set up, manage, or remove the background cron job without having to touch the cron table yourself:
 
 ```bash
-bash scripts/scheduler.sh
+bash scripts/scheduler.sh setup   # Installs the automated job
+bash scripts/scheduler.sh status  # Checks if the job is running
+bash scripts/scheduler.sh remove  # Deletes the automation safely
 ```
 
 ### Manual cron setup
 
-To run a full audit every day at 2:00 AM:
+To run a full audit every day at 4:00 AM:
 
 ```bash
 crontab -e

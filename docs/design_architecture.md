@@ -256,4 +256,4 @@ bash tests/test_software.sh
 | Cron calling interactive menu | Created dedicated `auto_audit.sh` for cron |
 | Cron needs absolute paths | Used `$(cd "$(dirname "$0")" && pwd)` to resolve paths |
 | Email credentials security | Separated into gitignored `email.conf` |
-| Line ending issues on Windows | Used Git Bash which handles LF/CRLF automatically |
+| Line ending issues on Windows | Added `.gitattributes` to enforce Linux `LF` internally |

@@ -188,7 +188,7 @@ send_report() {
 # Fully automated version for the auto_audit.sh cron job!
 send_report_auto() {
     local report_file
-    # Graps the newest full txt report
+    # Grabs the newest full txt report
     report_file=$(ls -t "$REPORT_DIR"/full_report_*.txt 2>/dev/null | head -1 || true)
 
     if [[ -z "$report_file" || ! -f "$report_file" ]]; then

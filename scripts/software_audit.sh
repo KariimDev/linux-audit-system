@@ -88,7 +88,7 @@ get_services_info() {
 
     if check_command ps; then
         log_info "Active processes (top 20 by CPU usage):"
-        ps aux --sort=-%cpu | head -20
+        ps aux --sort=-%cpu | head -20 || true
     else
         log_error "Cannot retrieve active processes information."
         return 1
