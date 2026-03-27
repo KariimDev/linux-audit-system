@@ -293,7 +293,7 @@ The `>>` operator appends execution output to the log file rather than overwriti
 | Task | Person |
 |---|---|
 | `utils.sh` — shared utilities and logging | Karim |
-| `hardware_audit.sh` — hardware data collection | Karim |
+| `hardware_audit.sh` — hardware data collection | Abderrahim |
 | `software_audit.sh` — software and OS collection | Karim |
 | `scheduler.sh` — cron job management | Karim |
 | `config/audit.conf` — main configuration | Karim |
