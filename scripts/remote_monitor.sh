@@ -46,7 +46,7 @@ test_ssh_connection() {
     # -q quiet mode
     # -o ConnectTimeout=5  stop trying after 5 seconds
     # -o BatchMode=yes  don't ask for a password prompt (requires SSH keys!)
-    if ssh -q -o ConnectTimeout=5 -o BatchMode=yes \
+    if ssh -q -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=no \
         "${remote_user}@${remote_host}" "exit" 2>/dev/null; then
         echo -e "  ${GREEN}✔  Connection successful.${RESET}"
         echo ""
@@ -67,7 +67,8 @@ monitor_remote() {
     echo ""
 
     # Everything inside 'REMOTE_COMMANDS' runs on the remote machine
-    ssh -o ConnectTimeout=10 "${remote_user}@${remote_host}" bash << 'REMOTE_COMMANDS'
+    # We pipe through `tr` to strip Windows CRLF line endings, preventing execution bugs on the Linux side
+    tr -d '\r' << 'REMOTE_COMMANDS' | ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "${remote_user}@${remote_host}" bash
 
 echo "======================================"
 echo "   REMOTE SYSTEM MONITOR"
@@ -129,12 +130,15 @@ send_report_to_remote() {
     echo -e "  ${YELLOW}File: $latest_report${RESET}"
     echo ""
 
-    # Before SCPing, make sure the destination directory exists on the remote end
-    ssh -q -o BatchMode=yes "${remote_user}@${remote_host}" "mkdir -p $REMOTE_DIR" 2>/dev/null || true
+    # Before transferring, make sure the destination directory exists on the remote end
+    ssh -q -o BatchMode=yes -o StrictHostKeyChecking=no "${remote_user}@${remote_host}" "mkdir -p '$REMOTE_DIR'" 2>/dev/null || true
 
-    # Using the directory defined in config/audit.conf (REMOTE_DIR) instead of hardcoding
-    if scp -o ConnectTimeout=10 "$latest_report" \
-        "${remote_user}@${remote_host}:${REMOTE_DIR}/"; then
+    local filename
+    filename=$(basename "$latest_report")
+    
+    # Bypass Windows 'scp' path-parsing bugs by piping the file directly over native SSH
+    if cat "$latest_report" | ssh -o ConnectTimeout=10 -o BatchMode=yes -o StrictHostKeyChecking=no \
+        "${remote_user}@${remote_host}" "cat > '$REMOTE_DIR/$filename'"; then
         echo -e "  ${GREEN}✔  Report sent to ${remote_user}@${remote_host}:${REMOTE_DIR}/${RESET}"
 
         local log_file="$REPORT_DIR/remote_log.txt"
