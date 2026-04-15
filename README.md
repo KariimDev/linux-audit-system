@@ -334,6 +334,22 @@ Cron execution is logged to `logs/audit.log`.
 
 ---
 
+## 🛠️ Troubleshooting & FAQ
+
+**Q: My cron job runs but no email is sent!**  
+*A: Cron runs in a stripped-down environment where the `$PATH` variable is practically empty. If you installed `msmtp` locally, cron might not see it. Our script forces dynamic absolute paths just for this reason, so ensure your daemon is installed globally (`sudo apt install msmtp`).*
+
+**Q: The script crashes when I select "Remote Monitoring (Option 6)".**  
+*A: This feature explicitly requires passwordless SSH entry via `ed25519` or `rsa` keys. If your system still prompts you to type a password when you SSH into the target box, our script's strict `BatchMode=yes` flag will instantly reject the connection to prevent your terminal from freezing indefinitely.*
+
+**Q: My HTML report renders as raw text in my inbox!**  
+*A: If you manually tweaked the reporting engine, make sure you didn't accidentally delete the `MIME-Version: 1.0` and `Content-Type: text/html` HTTP headers. Without those exact wrappers underneath the Subject line, Gmail will immediately fallback to displaying raw bracket code.*
+
+**Q: The audit log says "dmidecode requires root".**  
+*A: The tool `dmidecode` reaches directly into the BIOS/UEFI DMI tables to pull proprietary Motherboard serial schemas. The Linux kernel actively blocks standard unprivileged users from reading this low-level memory block. Run the tool via `sudo` if you need this data.*
+
+---
+
 ## 🌟 Bonus Features
 
 ### 🔄 Compare Two Reports (Option 7)
