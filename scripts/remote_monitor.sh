@@ -89,19 +89,22 @@ free -h | awk '/^Mem:/ {print "  Total: " $2 " | Used: " $3 " | Free: " $4}'
 echo ""
 
 echo "--- DISK USAGE ---"
-df -h | awk 'NR>1 {print "  " $1 " → " $5 " used"}'
+# Only show physical drives starting with /dev/ to filter out tmpfs spam
+df -h | grep "^/dev/" | awk '{printf "  %-15s → %s used\n", $1, $5}' || true
 echo ""
 
 echo "--- LOGGED IN USERS ---"
-who | awk '{print "  " $0}' || true
+who | awk '{print "  " $1, $3, $4}' | sed 's/^/  /' || true
 echo ""
 
 echo "--- TOP 5 PROCESSES ---"
-ps aux --sort=-%cpu | head -6 | awk '{print "  " $0}' || true
+# Use 'comm' instead of 'command' so it only prints the executable name without the massive parameters
+ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -6 | awk '{print "  " $0}' || true
 echo ""
 
-echo "--- OPEN PORTS ---"
-ss -tuln 2>/dev/null | awk '{print "  " $0}' || netstat -tuln 2>/dev/null | awk '{print "  " $0}' || true
+echo "--- OPEN PORTS (Listening) ---"
+# Only print the Protocol and Local Address/Port columns to keep it clean
+ss -tuln 2>/dev/null | awk 'NR>1 {printf "  %-5s %s\n", $1, $5}' || netstat -tuln 2>/dev/null | awk 'NR>2 {printf "  %-5s %s\n", $1, $4}' || true
 echo ""
 
 echo "======================================"
