@@ -304,7 +304,7 @@ The `>>` operator appends execution output to the log file rather than overwriti
 | `report_generator.sh` — report generation | Abderrahim |
 | `email_sender.sh` — email transmission | Abderrahim |
 | `remote_monitor.sh` — SSH remote monitoring | Abderrahim |
-| `README.md` — project documentation | Abderrahim |
+| `README.md` — project documentation | Karim |
 | `auto_audit.sh` — cron pipeline script | Both |
 | Integration testing and bug fixing | Both |
 | Presentation and demonstration | Both |

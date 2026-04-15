@@ -1,8 +1,10 @@
 # 🛡️ Linux System Audit & Monitoring Tool
 
-> **Academic Project** — National School of Cyber Security (NSCS)
-> Course: Operating Systems | Academic Year: 2025/2026
-> Assigned by: Dr. BENTRAD Sassi
+> **Mini-Project Part 1** — National School of Cyber Security (NSCS), Algeria  
+> **Course:** Operating Systems (Foundation Training) | **Academic Year:** 2025/2026  
+> **Supervisor:** Dr. BENTRAD Sassi  
+> **Developed by:** Akeb Abdelkarim & Kerd Abderrahim  
+> **Submission Date:** March 30, 2026
 
 A fully automated Linux system audit and monitoring solution built with pure Bash scripting. The tool collects hardware and software information, generates multi-format reports, sends them via email, supports remote monitoring over SSH, and automates execution with cron jobs.
 
@@ -376,8 +378,8 @@ Uses `sha256sum` to generate and verify checksums of audit log files, detecting 
 
 | Person | Role | Responsibilities |
 |---|---|---|
-| **Person A (Karim)** | Data Collection & Automation | `hardware_audit.sh`, `software_audit.sh`, `utils.sh`, `scheduler.sh`, `config/audit.conf` |
-| **Person B (Abdo)** | Output, Communication & Integration | `main.sh`, `report_generator.sh`, `email_sender.sh`, `remote_monitor.sh`, `README.md`, `docs/` |
+| **Akeb Abdelkarim** | Software Audit, Docs & Automation | `software_audit.sh`, `utils.sh`, `scheduler.sh`, `config/audit.conf`, `README.md`, Tests, Architecture Docs |
+| **Kerd Abderrahim** | Hardware Audit, Output & Integration | `hardware_audit.sh`, `main.sh`, `report_generator.sh`, `email_sender.sh`, `remote_monitor.sh` |
 
 ### Git Workflow
 
